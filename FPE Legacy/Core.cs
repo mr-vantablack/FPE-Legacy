@@ -3,8 +3,8 @@ using Il2Cpp;
 using MelonLoader;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(FPE_Legacy.Core), "FPE Legacy", "1.0.0", "mr_vantablack", null)]
-[assembly: MelonGame(null, null)]
+[assembly: MelonInfo(typeof(FPE_Legacy.Core), "FPE Legacy", "0.0.1", "mr_vantablack", null)]
+[assembly: MelonGame("ZeoWorks", "Slendytubbies 3")]
 
 namespace FPE_Legacy
 {
