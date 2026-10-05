@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "packageId": "my_props",
+  "version": "1.0.0",
+  "dependencies": [],
+  "assets": [
+    {
+      "id": "wooden_crate",
+      "path": "assets/custom/prefabs/wooden_crate.prefab",
+      "type": "GameObject",
+      "preload": true,
+      "network": {
+        "enabled": true,
+        "authority": "server",
+        "syncPosition": true,
+        "syncRotation": true,
+        "syncScale": false,
+        "physics": "server",
+        "sendRate": 20,
+        "interpolationDelay": 0.1,
+        "persistent": false
+      },
+      "components": [
+        {
+          "id": "body",
+          "type": "unity.rigidbody",
+          "target": "",
+          "mode": "getOrAdd",
+          "properties": { "mass": 5, "useGravity": true }
+        },
+        {
+          "id": "breakable",
+          "type": "fpe.breakable",
+          "target": "",
+          "mode": "getOrAdd",
+          "fields": {
+            "MaxHealth": 150,
+            "Health": 150,
+            "DestroyOnDeath": true,
+            "DropOffset": { "x": 0, "y": 0.5, "z": 0 },
+            "Body": { "$component": "body" }
+          }
+        }
+      ]
+    }
+  ]
+}

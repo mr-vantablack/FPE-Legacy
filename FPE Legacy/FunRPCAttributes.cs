@@ -308,6 +308,20 @@ namespace FPE_Legacy.Rpc
         private static bool SendInvocation(FunRPCDefinition definition, object instance, object[] args)
         {
             FunRPCSendOptions options = BuildOptions(definition.Attribute);
+            if (FPE_Legacy.Networking.FunNetwork.TryAddress(instance, out var identity, out var componentId))
+            {
+                if (definition.Attribute is FunServerRPCAttribute server && server.RequireOwnership && !identity.IsOwner && !FPE_Legacy.Networking.FunNetwork.IsServer)
+                    return false;
+                options.SuppressLog = true;
+                FPE_Legacy.Networking.FunNetwork.SendObjectRpc(identity, componentId, definition.RpcName, definition.Kind, options, args);
+                // Network dispatch executes the authoritative/local recipient when appropriate.
+                bool dispatchedHere = FPE_Legacy.Networking.FunNetwork.IsServer &&
+                    (definition.Kind == FunRPCKind.Server || (!options.ExcludeServer && (!options.ExcludeOwner || !identity.IsOwner) && (definition.Kind == FunRPCKind.Observers ||
+                     (definition.Kind == FunRPCKind.Target && args.Length > 0 && Convert.ToInt32(args[0]) == FPE_Legacy.Networking.FunTransport.LocalClientId))));
+                return definition.Attribute.RunLocally && !dispatchedHere;
+            }
+            if (instance is Component unbound && FPE_Legacy.Networking.FunNetwork.GetIdentity(unbound) != null)
+                throw new InvalidOperationException("Declare RPC component in the prefab manifest so it has a stable component ID.");
             bool sent = false;
 
             switch (definition.Kind)
@@ -431,6 +445,30 @@ namespace FPE_Legacy.Rpc
             }
         }
 
+        internal static bool InvokeNetwork(string rpcName, FunRPCKind kind, FPE_Legacy.Networking.FunNetworkIdentity identity,
+            string componentId, FunRPCContext context, FunRPCArguments incoming)
+        {
+            if (!_byRpcName.TryGetValue(rpcName, out var definition) || definition.Kind != kind || definition.Method.IsStatic) return false;
+            if (!identity.Content.Instances.TryGetValue(componentId, out object target) || !definition.Method.DeclaringType.IsInstanceOfType(target)) return false;
+            if (definition.Attribute is FunServerRPCAttribute server && server.RequireOwnership &&
+                (context.Sender == null || context.Sender.ClientId != identity.OwnerClientId))
+            {
+                // Local server calls are authoritative even for server-owned objects.
+                if (!FPE_Legacy.Networking.FunNetwork.IsServer || context.Carrier != null) return false;
+            }
+            MethodBase oldMethod = _remoteMethod;
+            FunRPCContext oldContext = _currentContext;
+            try
+            {
+                _remoteMethod = definition.Method; _currentContext = context;
+                context.Kind = kind;
+                definition.Method.Invoke(target, ConvertArguments(definition, incoming));
+                return true;
+            }
+            catch (Exception e) { MelonLogger.Error("[FunNetwork] RPC " + rpcName + ": " + (e.InnerException ?? e)); return false; }
+            finally { _remoteMethod = oldMethod; _currentContext = oldContext; }
+        }
+
         private static bool ValidateIncomingCall(FunRPCDefinition definition, FunRPCContext context)
         {
             if (!(definition.Attribute is FunServerRPCAttribute server) || !server.RequireOwnership)
@@ -462,8 +500,8 @@ namespace FPE_Legacy.Rpc
                 MelonLogger.Warning($"[FunRPC] Could not validate ServerRpc ownership through OwnerId: {e.Message}");
             }
 
-            MelonLogger.Warning($"[FunRPC] OwnerId is unavailable; allowing {FormatMethod(definition.Method)} without server-side ownership validation.");
-            return true;
+            MelonLogger.Warning($"[FunRPC] OwnerId is unavailable; rejected {FormatMethod(definition.Method)}.");
+            return false;
         }
 
         private static object[] ConvertArguments(FunRPCDefinition definition, FunRPCArguments incoming)

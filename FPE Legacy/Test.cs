@@ -1,3 +1,4 @@
+using FPE_Legacy.Networking;
 using FPE_Legacy.Rpc;
 using Il2Cpp;
 using Il2CppFishNet.Connection;
@@ -44,14 +45,22 @@ namespace FPE_Legacy
                 // SERVER -> REMOTE CLIENT.
                 if (Input.GetKeyDown(KeyCode.Keypad1))
                 {
-                    NetworkBehaviour carrier = FunRPCRuntime.GetCarrierForInstance(this, FunRPCKind.Observers);
-                    if (carrier != null && carrier.IsServerInitialized)
-                        SyncedHealth -= 10;
+                    var camera = Camera.main;
+                    var position = camera.transform.position + camera.transform.forward * 3f;
+                    FunNetwork.Observe(FunNetwork.SpawnAsync("fpe:cube",position,Quaternion.identity));
                 }
 
                 if (Input.GetKeyDown(KeyCode.Keypad2))
                 {
-                    SelectedNumber++;
+                    var camera = Camera.main;
+                    var position = camera.transform.position + camera.transform.forward * 3f;
+                    FunNetwork.RequestSpawn("balls:blue_ball", position, Quaternion.identity);
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad3))
+                {
+                    var camera = Camera.main;
+                    var position = camera.transform.position + camera.transform.forward * 3f;
+                    FunNetwork.RequestSpawn("balls:red_ball", position, Quaternion.identity);
                 }
 
                 if (Input.GetKeyDown(KeyCode.Keypad9))

@@ -19,10 +19,27 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <EmbeddedResource Remove="Content - Копировать\**" />
+	  <None Remove="Content - Копировать\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="Content\FunBundleBackend.cs" />
+		<Compile Include="Content\FunComponents.cs" />
+		<Compile Include="Content\FunContent.cs" />
+		<Compile Include="Content\FunMainThread.cs" />
+		<Compile Include="Content\FunManifest.cs" />
 		<Compile Include="Core.cs" />
+		<Compile Include="Editor\FunContentBuilderWindow.cs" />
+		<Compile Include="Examples\FunExampleComponents.cs" />
 		<Compile Include="FunRPC.cs" />
 		<Compile Include="FunRPCAttributes.cs" />
 		<Compile Include="FunSerializable.cs" />
+		<Compile Include="Network\FunNetwork.cs" />
+		<Compile Include="Network\FunNetworkFields.cs" />
+		<Compile Include="Network\FunNetworkTransform.cs" />
+		<Compile Include="Network\FunTransport.cs" />
+		<Compile Include="Network\FunWire.cs" />
 		<Compile Include="Patches.cs" />
 		<Compile Include="Test.cs" />
 	</ItemGroup>

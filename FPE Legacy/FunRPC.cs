@@ -146,6 +146,7 @@ namespace FPE_Legacy.Rpc
     public sealed class FunRPCSendOptions
     {
         public Channel Channel = Channel.Reliable;
+        public bool SuppressLog = false;
         public DataOrderType OrderType = DataOrderType.Default;
 
         // ObserversRpc options.
@@ -522,6 +523,8 @@ namespace FPE_Legacy.Rpc
         public static bool IsLocalOwner(object instance)
         {
             Component component = instance as Component;
+            var customIdentity = FPE_Legacy.Networking.FunNetwork.GetIdentity(component);
+            if (customIdentity != null) return customIdentity.IsOwner;
             if (component == null)
                 return false;
 
@@ -792,7 +795,7 @@ namespace FPE_Legacy.Rpc
                         throw new ArgumentOutOfRangeException(nameof(kind));
                 }
 
-                MelonLogger.Msg($"[FunRPC] Sent {kind} '{rpcName}' args={args?.Length ?? 0} " + $"via {carrier.gameObject.name}[{carrier.ObjectId}:{carrier.ComponentIndex}]" + (target == null ? string.Empty : $" -> ClientId={target.ClientId}"));
+                if (!options.SuppressLog) MelonLogger.Msg($"[FunRPC] Sent {kind} '{rpcName}' args={args?.Length ?? 0} " + $"via {carrier.gameObject.name}[{carrier.ObjectId}:{carrier.ComponentIndex}]" + (target == null ? string.Empty : $" -> ClientId={target.ClientId}"));
 
                 return true;
             }
@@ -824,6 +827,7 @@ namespace FPE_Legacy.Rpc
         public static bool TryConsumeIncoming(FunRPCKind kind, NetworkBehaviour carrier, bool fromRpcLink, uint hash, PooledReader reader, NetworkConnection sender, Channel channel)
         {
             int startPosition = reader.Position;
+            bool recognized = false;
 
             try
             {
@@ -845,6 +849,7 @@ namespace FPE_Legacy.Rpc
                     return false;
                 }
 
+                recognized = true;
                 byte version = reader.ReadUInt8Unpacked();
                 if (version != FunRPCProtocol.Version)
                 {
@@ -868,6 +873,7 @@ namespace FPE_Legacy.Rpc
             }
             catch (Exception e)
             {
+                if (!recognized) { reader.Position = startPosition; return false; }
                 // once magic has been matched the packet is ours. Do not send it into FishNet's regular dispatch table or it would report an unknown hash and corrupt the remaining packet stream
                 MelonLogger.Error($"[FunRPC] Failed to read incoming {kind} RPC:\n{e}");
                 return true;

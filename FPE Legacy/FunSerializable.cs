@@ -149,7 +149,7 @@ namespace FPE_Legacy.Rpc
 
             foreach (FunSerializableInstanceState state in states)
             {
-                if (state == null || state.Instance == null || state.Component == null)
+                if (state == null || state.Instance == null || state.Component == null || FPE_Legacy.Networking.FunNetwork.GetIdentity(state.Component) != null)
                     continue;
 
                 try
@@ -363,7 +363,7 @@ namespace FPE_Legacy.Rpc
                     foreach (UnityEngine.Object unityObject in found)
                     {
                         Component component = unityObject as Component;
-                        if (component == null)
+                        if (component == null || FPE_Legacy.Networking.FunNetwork.GetIdentity(component) != null)
                             continue;
 
                         object managed = ResolveManagedInstance(definition.ComponentType, component);
