@@ -20,12 +20,15 @@
 
 	<ItemGroup>
 	  <EmbeddedResource Remove="Content - Копировать\**" />
+	  <EmbeddedResource Remove="SpawnUI\**" />
 	  <None Remove="Content - Копировать\**" />
+	  <None Remove="SpawnUI\**" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Compile Include="Content\FunBundleBackend.cs" />
 		<Compile Include="Content\FunComponents.cs" />
+		<Compile Include="Content\FunContent.Catalogue.cs" />
 		<Compile Include="Content\FunContent.cs" />
 		<Compile Include="Content\FunMainThread.cs" />
 		<Compile Include="Content\FunManifest.cs" />
@@ -41,6 +44,8 @@
 		<Compile Include="Network\FunTransport.cs" />
 		<Compile Include="Network\FunWire.cs" />
 		<Compile Include="Patches.cs" />
+		<Compile Include="Sandbox\FunSandboxConsole.cs" />
+		<Compile Include="Sandbox\FunSandboxScroll.cs" />
 		<Compile Include="Test.cs" />
 	</ItemGroup>
 

@@ -1,6 +1,7 @@
 using FPE_Legacy.Content;
 using FPE_Legacy.Networking;
 using FPE_Legacy.Rpc;
+using FPE_Legacy.Sandbox;
 using MelonLoader;
 using UnityEngine;
 
@@ -10,7 +11,6 @@ namespace FPE_Legacy
 {
     public class Core : MelonMod
     {
-        private bool _scanStarted;
         public override void OnInitializeMelon()
         {
             FunRPCRuntime.Initialize();
@@ -33,13 +33,20 @@ namespace FPE_Legacy
                 return go;
             });
             LoggerInstance.Msg("[FPE] Content root: " + FunContent.RootDirectory);
+            // Register every component/factory above this point. Index before Volume.Awake
+            // so the native console sees complete categories while building its buttons.
+            FunNetwork.Observe(FunContent.ScanAsync(yieldBetweenBundles: false));
         }
         public override void OnUpdate()
         {
             FunContent.Tick();
-            if (!_scanStarted) { _scanStarted = true; FunNetwork.Observe(FunContent.ScanAsync()); }
             FunNetwork.Tick();
+            FunSandboxConsole.Tick();
             FunSerializableRuntime.Tick();
+        }
+        public override void OnDeinitializeMelon()
+        {
+            FunSandboxConsole.Shutdown();
         }
     }
 }

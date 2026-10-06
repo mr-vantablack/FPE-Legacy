@@ -39,7 +39,7 @@ namespace FPE_Legacy.Content
             FunContent.ReleaseInstance(this);
         }
     }
-    public static class FunContent
+    public static partial class FunContent
     {
         private sealed class Package
         {
@@ -78,8 +78,10 @@ namespace FPE_Legacy.Content
             RootDirectory = Path.GetFullPath(directory ?? Path.Combine(MelonEnvironment.GameRootDirectory, "Mods", "FunPlusEssentials", "Assets"));
             Directory.CreateDirectory(RootDirectory);
         }
-        // Call after registering your types and factories. Core invokes this on its first update
-        public static async Task ScanAsync()
+        // Call after registering all types and factories. Core indexes at the end of initialization.
+        // The false mode omits per-bundle frame yields; it never blocks on a pending Task.
+        public static Task ScanAsync() => ScanAsync(yieldBetweenBundles: true);
+        public static async Task ScanAsync(bool yieldBetweenBundles)
         {
             FunMainThread.Require();
             if (_scanStarted) { await Ready; return; }
@@ -120,7 +122,7 @@ namespace FPE_Legacy.Content
                         TryUnload(backend);
                         throw;
                     }
-                    await FunMainThread.NextFrame();
+                    if (yieldBetweenBundles) await FunMainThread.NextFrame();
                 }
                 foreach (var registration in Manual)
                 {

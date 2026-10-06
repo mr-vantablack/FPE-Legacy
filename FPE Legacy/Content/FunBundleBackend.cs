@@ -7,9 +7,6 @@ using UnityEngine;
 
 namespace FPE_Legacy.Content
 {
-    // Unity 6 requires MelonLoader 0.7.3 or later. Direct calls to UnityEngine.Il2CppAssetBundleManager.dll.
-    // Native loads are synchronous. Task return types preserve the FunContent API;
-    // they do NOT move Unity calls onto a worker thread.
     internal sealed class FunBundleBackend
     {
         private Il2CppAssetBundle _bundle;
@@ -71,7 +68,6 @@ namespace FPE_Legacy.Content
             if (names == null)
                 throw new InvalidOperationException("GetAllAssetNames returned null: " + _file);
 
-            // Il2CppStringArray is not a CLR string[]. Avoid LINQ/Cast ambiguity.
             var result = new string[names.Length];
             for (int i = 0; i < result.Length; i++)
                 result[i] = names[i];
