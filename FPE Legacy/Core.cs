@@ -33,8 +33,7 @@ namespace FPE_Legacy
                 return go;
             });
             LoggerInstance.Msg("[FPE] Content root: " + FunContent.RootDirectory);
-            // Register every component/factory above this point. Index before Volume.Awake
-            // so the native console sees complete categories while building its buttons.
+            // Register components and factories before scanning; Volume.Awake needs the full catalogue.
             FunNetwork.Observe(FunContent.ScanAsync(yieldBetweenBundles: false));
         }
         public override void OnUpdate()

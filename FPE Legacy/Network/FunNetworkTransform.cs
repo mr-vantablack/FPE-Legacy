@@ -71,7 +71,7 @@ namespace FPE_Legacy.Networking
             bool reset = sample.Teleport || sample.Revision > _revision;
             _lastSequence = sample.Sequence; _revision = sample.Revision;
             double offset = Time.realtimeSinceStartupAsDouble - sample.Time;
-            // Minimum observed delay gives a stable server timeline; no extrapolation on missing data.
+            // Use the smallest observed clock offset to reduce jitter from network delays.
             if (!_hasTime || reset) { _clockOffset = offset; _hasTime = true; _playback = double.NegativeInfinity; }
             else _clockOffset = Math.Min(_clockOffset, offset);
             if (reset) { _samples.Clear(); Apply(sample); }
@@ -99,7 +99,7 @@ namespace FPE_Legacy.Networking
         private static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
         internal static void RegisterWire()
         {
-            // Reserved custom serializer ID for FPE networking. Change both peers together if another mod uses it.
+            // ID 180 must match on the host and clients; check for conflicts with other mods.
             FunRPCSerializer.RegisterCustom<FunTransformBatch>(180, (w, batch) =>
             {
                 w.WriteString(batch.Epoch); w.WriteString(batch.Token); w.WriteUInt8Unpacked((byte)batch.Samples.Count);

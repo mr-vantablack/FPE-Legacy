@@ -76,7 +76,7 @@ namespace FPE_Legacy.Networking
         public static bool IsReady => FunContent.IsReady && (IsServer || _clientReady);
         public static string LastError { get; private set; }
         public static IReadOnlyCollection<FunNetworkIdentity> Spawned => Objects.Values.ToArray();
-        // default denies client spawn requests. Host code may approve specific prefab/position pairs
+        // Client spawn requests are denied unless the host approves them here.
         public static Func<FunSpawnRequest, bool> ApproveSpawnRequest { get; set; }
         public static event Action<FunNetworkIdentity> ObjectSpawned;
         public static event Action<FunNetworkIdentity> ObjectDespawned;

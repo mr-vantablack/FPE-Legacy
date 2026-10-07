@@ -78,8 +78,8 @@ namespace FPE_Legacy.Content
             RootDirectory = Path.GetFullPath(directory ?? Path.Combine(MelonEnvironment.GameRootDirectory, "Mods", "FunPlusEssentials", "Assets"));
             Directory.CreateDirectory(RootDirectory);
         }
-        // Call after registering all types and factories. Core indexes at the end of initialization.
-        // The false mode omits per-bundle frame yields; it never blocks on a pending Task.
+        // Register types and factories before scanning.
+        // yieldBetweenBundles only controls frame yields; pending tasks are still awaited.
         public static Task ScanAsync() => ScanAsync(yieldBetweenBundles: true);
         public static async Task ScanAsync(bool yieldBetweenBundles)
         {
@@ -138,13 +138,13 @@ namespace FPE_Legacy.Content
                 }
                 Fingerprint = HashText(string.Join("\n", Packages.Values.OrderBy(p => p.Id).Select(p => p.Id + "=" + p.Hash)) + "\n" +
                     string.Join("\n", Assets.OrderBy(p => p.Key).Select(p => p.Key + "=" + FunJson.Write(p.Value.Definition) + ":" + p.Value.FactoryVersion)) + "\n" + FunComponents.Fingerprint() + "\n" + typeof(FunContent).Assembly.ManifestModule.ModuleVersionId);
-                // Catalogue is complete. Internal warmup avoids awaiting Ready recursively.
+                // Use internal warmup here; the public API would wait on this scan's Ready task.
                 foreach (var pair in Assets.Where(p => p.Value.Definition.Preload).ToArray()) await LoadInternal(pair.Key, new HashSet<string>());
                 _ready.TrySetResult(true); Report("Content ready. Assets=" + Assets.Count + ", fingerprint=" + Fingerprint);
             }
             catch (Exception e)
             {
-                // Initialization is all-or-nothing: do not leave bundles loaded after a failure.
+                // Release loaded bundles if initialization fails.
                 foreach (var package in Packages.Values) TryUnload(package.Bundle);
                 Packages.Clear();
                 foreach (var id in Assets.Where(p => p.Value.Factory == null).Select(p => p.Key).ToArray())
@@ -153,7 +153,7 @@ namespace FPE_Legacy.Content
                 Loaded.Clear();
                 Fingerprint = null;
                 _ready.TrySetException(e);
-                _ = _ready.Task.Exception; // Retain failure for awaiters without an unobserved duplicate.
+                _ = _ready.Task.Exception; // Observe the exception; awaiters still receive it.
                 Report("Content initialization FAILED: " + e);
                 throw;
             }
@@ -216,7 +216,7 @@ namespace FPE_Legacy.Content
             if (ancestry.Contains(id)) throw new FormatException("Cyclic $asset reference: " + id);
             if (Loads.TryGetValue(id, out var task))
             {
-                // Factory entries intentionally complete with null; they have no cached prefab.
+                // Factories have no cached prefab, so null is expected.
                 if (!task.IsCompletedSuccessfully || task.Result != null || GetAsset(id).Factory != null)
                     return await task;
                 Loads.Remove(id);
@@ -241,7 +241,7 @@ namespace FPE_Legacy.Content
         internal static object GetLoaded(string id, Type type)
         {
             if (!Loaded.TryGetValue(id, out var value) || value == null) throw new InvalidOperationException("Asset reference not preloaded: " + id);
-            // Cast via Il2CppInterop to preserve requested native wrapper type.
+            // Use the IL2CPP cast to get the requested native wrapper type.
             var cast = typeof(Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase).GetMethods().First(m => m.Name == "Cast" && m.IsGenericMethodDefinition && m.GetParameters().Length == 0);
             if (!typeof(UnityEngine.Object).IsAssignableFrom(type)) throw new FormatException("$asset target must be a Unity object.");
             return cast.MakeGenericMethod(type).Invoke(value, null);
@@ -271,7 +271,7 @@ namespace FPE_Legacy.Content
                 if (asset.Factory != null)
                 {
                     go = asset.Factory() ?? throw new InvalidOperationException("Factory returned null.");
-                    go.SetActive(false); // Factory MUST return inactive if it contains scripts which rely on configured fields.
+                    go.SetActive(false); // Factories must return inactive objects if scripts need fields configured before OnEnable.
                 }
                 else
                 {
@@ -298,7 +298,7 @@ namespace FPE_Legacy.Content
                     }
                     if (go == null)
                         throw new InvalidOperationException("Instantiate returned no live GameObject: " + id);
-                    // The retention flag belongs to the cached asset, not to scene instances.
+                    // Only the cached asset needs to be retained.
                     go.hideFlags &= ~HideFlags.DontUnloadUnusedAsset;
                     go.SetActive(false);
                 }
@@ -312,7 +312,7 @@ namespace FPE_Legacy.Content
             }
             catch { if (go != null) UnityEngine.Object.Destroy(go); throw; }
         }
-        // Clears all caches as a unit so cross-package $asset references cannot outlive dependencies
+        // Clear caches together because $asset references can cross package boundaries.
         public static void UnloadUnused()
         {
             FunMainThread.Require(); if (!IsReady) throw new InvalidOperationException("Wait for content initialization.");

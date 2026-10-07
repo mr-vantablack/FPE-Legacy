@@ -43,7 +43,7 @@ namespace FPE_Legacy.Networking
         internal static FunRPCSendOptions Quiet(Channel channel) => new() { Channel = channel, ExcludeServer = true, ValidateTarget = true, SuppressLog = true };
         internal static NetworkBehaviour TargetCarrier(NetworkConnection target)
         {
-            // Never fall back to an unrelated object: target must know this exact object.
+            // Use the target's own object so the client can resolve the carrier.
             if (target?.FirstObject == null) return null;
             foreach (var component in target.FirstObject.GetComponents<NetworkBehaviour>())
                 if (component != null && component.IsSpawned && component.IsServerInitialized) return component;

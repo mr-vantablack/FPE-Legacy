@@ -7,8 +7,6 @@ using UnityEngine.UI;
 
 namespace FPE_Legacy.Sandbox
 {
-    // The supplied game's two viewports, with IL2CPP-safe corners and dynamic sizing.
-    // Only touches ScrollRect/layout; it never changes UI input routing.
     internal sealed class FunSandboxScroll
     {
         private sealed class Pane
@@ -35,7 +33,7 @@ namespace FPE_Legacy.Sandbox
                 if (pane.Viewport == null || pane.Content == null || pane.Scroll == null)
                 {
                     var viewport = console.transform.Find(Viewports[i]);
-                    if (viewport == null) continue; // Another console variant or not built yet.
+                    if (viewport == null) continue;
                     var content = viewport.Find(Contents[i]);
                     if (content == null) continue;
                     pane.Viewport = viewport.GetComponent<RectTransform>();
@@ -62,7 +60,7 @@ namespace FPE_Legacy.Sandbox
                     scroll.scrollSensitivity = 60f;
                     scroll.horizontalScrollbar = null;
                     scroll.verticalScrollbar = null;
-                    if (i == 1) pane.Viewport.anchorMax = new Vector2(1, .91f); // User's options viewport fix.
+                    if (i == 1) pane.Viewport.anchorMax = new Vector2(1, .91f);
                     pane.Measured = false;
                 }
                 if (!initial && !pane.Viewport.gameObject.activeInHierarchy) continue;
@@ -70,7 +68,7 @@ namespace FPE_Legacy.Sandbox
                 if (pane.Measured && pane.Geometry == stamp.geometry) continue;
                 Canvas.ForceUpdateCanvases();
                 Measure(pane, !pane.Measured || pane.Children != stamp.children);
-                stamp = Stamp(pane); // Resizing can legitimately change children's local rects.
+                stamp = Stamp(pane); // Measure can change child rects, so refresh the stamp.
                 pane.Geometry = stamp.geometry;
                 pane.Children = stamp.children;
                 pane.Measured = true;
@@ -84,7 +82,7 @@ namespace FPE_Legacy.Sandbox
                 int children = 17, geometry = pane.Viewport.rect.height.GetHashCode();
                 for (int i = 0; i < pane.Content.childCount; i++)
                 {
-                    // IL2CPP returns a Transform wrapper; CLR `as RectTransform` can fail.
+                    // Use TryCast: IL2CPP returns a Transform wrapper even for RectTransforms.
                     var child = pane.Content.GetChild(i).TryCast<RectTransform>();
                     if (child == null || !child.gameObject.activeSelf) continue;
                     children = children * 31 + child.GetInstanceID();
@@ -109,8 +107,7 @@ namespace FPE_Legacy.Sandbox
                 if (child == null) continue;
                 _positions.Add((child, child.position));
                 if (!child.gameObject.activeSelf) continue;
-                // A managed Vector3[] would be copied into a temporary native array;
-                // writes from GetWorldCorners would not update the original managed array.
+                // GetWorldCorners needs a native array; writes to a temporary copy of Vector3[] would be lost.
                 child.GetWorldCorners(_corners);
                 for (int p = 0; p < 4; p++)
                 {
@@ -129,7 +126,7 @@ namespace FPE_Legacy.Sandbox
             var position = content.anchoredPosition;
             position.y = oldTop;
             content.anchoredPosition = position;
-            // Keep the game's existing button placement when the content pivot/height changes.
+            // Restore button positions after changing the content pivot and height.
             foreach (var saved in _positions)
                 if (saved.child != null) saved.child.position = saved.position;
             _positions.Clear();

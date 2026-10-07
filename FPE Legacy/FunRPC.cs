@@ -48,8 +48,8 @@ namespace FPE_Legacy.Rpc
     }
 
     /// <summary>
-    /// FishNet hashes reserved by the mod RPC bridge,they are not registered in FishNet RPC tables
-    /// harmony consumes them before FishNet tries to dispatch them
+    /// Harmony intercepts these hashes before FishNet dispatches them.
+    /// They are not registered in FishNet's RPC tables.
     /// </summary>
     public static class FunRPCProtocol
     {
@@ -73,8 +73,7 @@ namespace FPE_Legacy.Rpc
     }
 
     /// <summary>
-    /// Information about the RPC which is currently executing
-    /// sender is only populated for Server RPCs
+    /// Context for the current RPC. Sender is set only for server RPCs.
     /// </summary>
     public sealed class FunRPCContext
     {
@@ -89,9 +88,6 @@ namespace FPE_Legacy.Rpc
         }
     }
 
-    /// <summary>
-    /// Type-safe access to RPC arguments
-    /// </summary>
     public sealed class FunRPCArguments
     {
         private readonly object[] _values;
@@ -140,21 +136,18 @@ namespace FPE_Legacy.Rpc
         }
     }
 
-    /// <summary>
-    /// Optional send settings. Defaults mirror ordinary FishNet RPC behaviour as closely as possible
-    /// </summary>
     public sealed class FunRPCSendOptions
     {
         public Channel Channel = Channel.Reliable;
         public bool SuppressLog = false;
         public DataOrderType OrderType = DataOrderType.Default;
 
-        // ObserversRpc options.
+        // Applies to observer RPCs.
         public bool BufferLast = false;
         public bool ExcludeServer = false;
         public bool ExcludeOwner = false;
 
-        // TargetRpc option.
+        // Applies to target RPCs.
         public bool ValidateTarget = true;
 
         public static FunRPCSendOptions Default
@@ -198,7 +191,7 @@ namespace FPE_Legacy.Rpc
     }
 
     /// <summary>
-    /// Serializer used inside the custom RPC payload. Unlike FishNet Weaver this shit runs entirely at runtime
+    /// Serializes RPC arguments at runtime without FishNet Weaver.
     /// </summary>
     public static class FunRPCSerializer
     {
@@ -209,8 +202,8 @@ namespace FPE_Legacy.Rpc
             new Dictionary<byte, IFunRPCCustomSerializer>();
 
         /// <summary>
-        /// Registers a custom data type. IDs 128..255 are reserved for user serializers
-        /// both host and client must register the same id/type pair
+        /// Registers a serializer with an ID from 128 to 255.
+        /// The host and clients must use the same ID for the same type.
         /// </summary>
         public static void RegisterCustom<T>(byte typeId, Action<PooledWriter, T> writer, Func<PooledReader, T> reader)
         {
@@ -440,7 +433,7 @@ namespace FPE_Legacy.Rpc
                     if (enumType != null && enumType.IsEnum)
                         return Enum.ToObject(enumType, rawValue);
 
-                    // The enum type may be unavailable on this side; preserving the numeric value is safer.
+                    // Keep the numeric value if this peer doesn't have the enum type.
                     return rawValue;
                 }
                 default:
@@ -486,8 +479,6 @@ namespace FPE_Legacy.Rpc
             MelonLogger.Msg($"[FunRPC] Hashes: Server={FunRPCProtocol.ServerHash}, Observers={FunRPCProtocol.ObserversHash}, Target={FunRPCProtocol.TargetHash}");
         }
 
-        // registration
-
         public static void RegisterServer(string name, Action<FunRPCContext, FunRPCArguments> handler)
         {
             RegisterHandler(_serverHandlers, name, handler, FunRPCKind.Server);
@@ -519,7 +510,6 @@ namespace FPE_Legacy.Rpc
             MelonLogger.Msg($"[FunRPC] Registered {kind} handler '{name}'.");
         }
 
-        // attribute RPC support
         public static bool IsLocalOwner(object instance)
         {
             Component component = instance as Component;
@@ -844,7 +834,7 @@ namespace FPE_Legacy.Rpc
                 string magic = reader.ReadStringAllocated();
                 if (magic != FunRPCProtocol.Magic)
                 {
-                    // same numerical hash belongs to a real FishNet RPC. Let FishNet handle it
+                    // The hash may belong to a FishNet RPC; rewind so FishNet can read it.
                     reader.Position = startPosition;
                     return false;
                 }
@@ -874,7 +864,8 @@ namespace FPE_Legacy.Rpc
             catch (Exception e)
             {
                 if (!recognized) { reader.Position = startPosition; return false; }
-                // once magic has been matched the packet is ours. Do not send it into FishNet's regular dispatch table or it would report an unknown hash and corrupt the remaining packet stream
+                // A recognized FPE packet stays consumed even if parsing fails.
+                // Passing it to FishNet would disrupt the remaining packet stream.
                 MelonLogger.Error($"[FunRPC] Failed to read incoming {kind} RPC:\n{e}");
                 return true;
             }
@@ -912,8 +903,6 @@ namespace FPE_Legacy.Rpc
             }
         }
 
-        // carrier selection
-
         private static NetworkBehaviour GetClientCarrier()
         {
             if (IsValidClientCarrier(_clientCarrier))
@@ -936,7 +925,7 @@ namespace FPE_Legacy.Rpc
         {
             try
             {
-                // target own FirstObject is the best carrier cuz the client necessarily knows it
+                // Prefer the target's own object, which is already known to that client.
                 if (target.FirstObject != null)
                 {
                     NetworkBehaviour[] ownedBehaviours = target.FirstObject.GetComponents<NetworkBehaviour>();
@@ -1042,8 +1031,6 @@ namespace FPE_Legacy.Rpc
             try { return nb.IsSpawned && nb.IsServerInitialized; }
             catch { return false; }
         }
-
-        // debugggggg
 
         public static void PrintNetworkBehaviours()
         {

@@ -74,7 +74,7 @@ namespace FPE_Legacy.Networking
             foreach (var pair in Queues.ToArray())
             {
                 var queue = pair.Value;
-                // Per-connection work limit; a slow peer cannot stop other peers.
+                // Limit work per connection so one peer can't hold up the others.
                 for (int budget = 0; budget < 24 && queue.Count != 0; budget++)
                 {
                     var current = queue.Peek();

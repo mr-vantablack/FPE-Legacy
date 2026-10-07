@@ -16,7 +16,7 @@ namespace FPE_Legacy.Content
     public sealed class FunDependency
     {
         public string PackageId { get; set; }
-        public string Version { get; set; } // optional 
+        public string Version { get; set; }
     }
     public sealed class FunAssetDefinition
     {

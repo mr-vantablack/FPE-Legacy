@@ -12,46 +12,32 @@ using UnityEngine;
 
 namespace FPE_Legacy.Rpc
 {
-    /// <summary>
-    /// Base attribute for FPE runtime RPC methods
-    /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
     public abstract class FunRPCAttribute : Attribute
     {
         /// <summary>
-        /// If true, the method body is also executed immediately on the sending side
-        /// Default is false
+        /// Also runs the method on the sender. Disabled by default.
         /// </summary>
         public bool RunLocally { get; set; }
 
         /// <summary>
-        /// Use FishNet unreliable channel instead of reliable
+        /// Sends over FishNet's unreliable channel.
         /// </summary>
         public bool Unreliable { get; set; }
 
         internal abstract FunRPCKind Kind { get; }
     }
 
-    /// <summary>
-    /// Client -> server RPC
-    /// Example:
-    /// [FunServerRPC(RequireOwnership = false)]
-    /// private void Damage(int amount, Vector3 point) { blabla }
-    /// </summary>
     public sealed class FunServerRPCAttribute : FunRPCAttribute
     {
         /// <summary>
-        /// When true, the selected FishNet carrier must be owned by this client
-        /// FishNet normal ServerRpc defaults to ownership required, so this also defaults to true
+        /// Requires the sending client to own the carrier. Enabled by default.
         /// </summary>
         public bool RequireOwnership { get; set; } = true;
 
         internal override FunRPCKind Kind => FunRPCKind.Server;
     }
 
-    /// <summary>
-    /// Server -> observers RPC
-    /// </summary>
     public sealed class FunObserversRPCAttribute : FunRPCAttribute
     {
         public bool BufferLast { get; set; }
@@ -62,8 +48,7 @@ namespace FPE_Legacy.Rpc
     }
 
     /// <summary>
-    /// Server -> remote client RPC
-    /// The FIRST method argument must be int clientId
+    /// Sends to one client. The first parameter must be int clientId.
     /// </summary>
     public sealed class FunTargetRPCAttribute : FunRPCAttribute
     {
@@ -84,10 +69,7 @@ namespace FPE_Legacy.Rpc
     }
 
     /// <summary>
-    /// Runtime replacement for the part FishNet Weaver normally generates from RPC attributes
-    ///
-    /// At startup it scans mod assemblies, finds methods marked with FunRPC attributes,
-    /// and registers a receiving handler with FunRPCRuntime
+    /// Finds attributed RPC methods and registers their handlers at runtime.
     /// </summary>
     public static class FunRPCAttributeRuntime
     {
@@ -111,9 +93,8 @@ namespace FPE_Legacy.Rpc
         private static bool _initialized;
 
         /// <summary>
-        /// Context of the RPC currently being executed remotely
-        /// For ServerRpc, CurrentContext.SenderClientId contains the sender
-        /// Null when the method is not currently executing as a received RPC
+        /// Context of the received RPC, or null outside a received call.
+        /// SenderClientId identifies the sender of a server RPC.
         /// </summary>
         public static FunRPCContext CurrentContext => _currentContext;
 
@@ -147,8 +128,8 @@ namespace FPE_Legacy.Rpc
         }
 
         /// <summary>
-        /// Scan an mod assembly for [FunServerRPC], [FunObserversRPC] and [FunTargetRPC]
-        /// Call this manually if RPC methods live in another plugin/mod assembly loaded before this runtime
+        /// Registers attributed RPC methods from an assembly.
+        /// Call this for other mods that were loaded before the runtime initialized.
         /// </summary>
         public static void RegisterAssembly(Assembly assembly)
         {
@@ -282,12 +263,11 @@ namespace FPE_Legacy.Rpc
         }
 
         /// <summary>
-        /// Harmony prefix installed on every attributed RPC method
-        /// Local call -> serialize and send, received call -> permit original body to run
+        /// Sends local calls over the network and lets received calls run the method body.
         /// </summary>
         public static bool OutgoingPrefix(object __instance, MethodBase __originalMethod, object[] __args)
         {
-            // We are intentionally invoking this exact method as the result of a received RPC.
+            // A received call must run the body without sending another RPC.
             if (_remoteMethod == __originalMethod)
                 return true;
 
@@ -314,7 +294,7 @@ namespace FPE_Legacy.Rpc
                     return false;
                 options.SuppressLog = true;
                 FPE_Legacy.Networking.FunNetwork.SendObjectRpc(identity, componentId, definition.RpcName, definition.Kind, options, args);
-                // Network dispatch executes the authoritative/local recipient when appropriate.
+                // Dispatch may already have run the method here; avoid running it twice.
                 bool dispatchedHere = FPE_Legacy.Networking.FunNetwork.IsServer &&
                     (definition.Kind == FunRPCKind.Server || (!options.ExcludeServer && (!options.ExcludeOwner || !identity.IsOwner) && (definition.Kind == FunRPCKind.Observers ||
                      (definition.Kind == FunRPCKind.Target && args.Length > 0 && Convert.ToInt32(args[0]) == FPE_Legacy.Networking.FunTransport.LocalClientId))));
@@ -375,8 +355,6 @@ namespace FPE_Legacy.Rpc
                 MelonLogger.Warning($"[FunRPC] Attributed {definition.Kind} '{definition.RpcName}' was not sent.");
             }
 
-            // false = skip the method body on the sender
-            // true = execute body locally as well
             return definition.Attribute.RunLocally;
         }
 
@@ -453,7 +431,7 @@ namespace FPE_Legacy.Rpc
             if (definition.Attribute is FunServerRPCAttribute server && server.RequireOwnership &&
                 (context.Sender == null || context.Sender.ClientId != identity.OwnerClientId))
             {
-                // Local server calls are authoritative even for server-owned objects.
+                // Local server calls don't need client ownership.
                 if (!FPE_Legacy.Networking.FunNetwork.IsServer || context.Carrier != null) return false;
             }
             MethodBase oldMethod = _remoteMethod;
@@ -570,8 +548,7 @@ namespace FPE_Legacy.Rpc
                 return null;
             }
 
-            // if the RPC component sits on the same networked GameObject as the
-            // selected FishNet carrier, resolve that exact corresponding remote component
+            // Try the carrier's GameObject first to resolve the matching component.
             try
             {
                 if (context != null && context.Carrier != null && context.Carrier.gameObject != null)
@@ -587,7 +564,7 @@ namespace FPE_Legacy.Rpc
                 MelonLogger.Warning($"[FunRPC] Could not resolve RPC component on carrier GameObject: {e.Message}");
             }
 
-            // fallback for global/singleton components such as a DontDestroyOnLoad shit
+            // Fall back to a scene lookup for global components.
             try
             {
                 UnityEngine.Object found = UnityEngine.Object.FindObjectOfType(il2cppType);

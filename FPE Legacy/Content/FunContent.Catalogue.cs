@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace FPE_Legacy.Content
 {
-    // Detached display data: callers cannot edit the real content definitions.
+    // Copies for display, so callers can't change the underlying definitions.
     public sealed class FunSpawnEntry
     {
         public string Id { get; }

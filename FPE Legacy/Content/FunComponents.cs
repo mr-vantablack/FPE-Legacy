@@ -43,7 +43,6 @@ namespace FPE_Legacy.Content
             if (FunContent.CatalogueLocked) throw new InvalidOperationException("Register components before ScanAsync.");
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Component id is empty.");
             if (Types.TryGetValue(id, out var old) && old.Type != typeof(T)) throw new InvalidOperationException("Duplicate component type id: " + id);
-            //Types[id] = new Registration { Type = typeof(T), Add = go => go.AddComponent<T>(), Find = go => go.GetComponents<T>().Cast<Component>().ToArray() };
             Types[id] = new Registration
             {
                 Type = typeof(T),
@@ -63,7 +62,7 @@ namespace FPE_Legacy.Content
         }
         internal static object Managed(Type type, Component component)
         {
-            // Native proxy wrappers must resolve back to the ORIGINAL managed injected instance
+            // Resolve the original injected instance so its managed fields are preserved.
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 var helper = assembly.GetType("Il2CppInterop.Runtime.Injection.ClassInjectorBase");

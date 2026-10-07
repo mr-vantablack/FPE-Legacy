@@ -26,14 +26,14 @@ namespace FPE_Legacy.Patches
     [HarmonyPatch(typeof(Volume), "Awake")]
     public static class SandboxConsolePatch
     {
-        // Fill an already deserialized list before native Awake builds UI.
+        // Add categories before Awake builds the buttons.
         [HarmonyPrefix]
         private static void Prefix(Volume __instance)
         {
             FunSandboxConsole.Attach(__instance);
         }
 
-        // Also handles games where Awake creates/replaces the categories list itself.
+        // Retry in case Awake created or replaced the categories list.
         [HarmonyPostfix]
         private static void Postfix(Volume __instance)
         {
@@ -48,8 +48,6 @@ namespace FPE_Legacy.Patches
         [HarmonyPrefix]
         private static bool Prefix(Volume __instance, ref int theCatagory, ref int theOption)
         {
-            // true: vanilla option, let the game handle it.
-            // false: our option was consumed, never forward an FPE resource ID to the game.
             return !FunSandboxConsole.TryHandleOption(__instance, theCatagory, theOption);
         }
     }

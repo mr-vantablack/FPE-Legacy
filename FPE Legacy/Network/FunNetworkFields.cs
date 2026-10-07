@@ -65,7 +65,7 @@ namespace FPE_Legacy.Networking
                 }
                 else if (_identity.IsOwner && f.Attribute.WritePermission == FunSerializableWritePermission.Owner)
                 {
-                    // Authoritative echo is always delivered, including to the owner.
+                    // The server echoes the accepted value back to the owner too.
                     if (FunNetwork.RequestField(_identity, new FunFieldValue { Component = f.Component, Field = f.Info.Name, Value = current })) f.Observed = text;
                 }
                 else { FunValues.SetField(f.Instance, f.Info, old); f.Observed = f.Canonical.GetRawText(); }

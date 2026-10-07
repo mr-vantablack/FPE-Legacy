@@ -21,8 +21,6 @@ namespace FPE_Legacy.Sandbox
         }
     }
 
-    // Only an adapter to the native Volume console. Creates no Canvas, EventSystem,
-    // input module, menu marker or custom keyboard/cursor handler.
     public static class FunSandboxConsole
     {
         private const string ResourcePrefix = "fpe-content://";
@@ -45,7 +43,7 @@ namespace FPE_Legacy.Sandbox
         public static Func<Camera> CameraProvider = () => Camera.main;
         public static Func<string, string> CategoryNameProvider = package => "FPE / " + package;
         public static Func<FunSpawnEntry, string> OptionNameProvider = entry => entry.Title;
-        // Optional bridge to a game-specific placement point. Called only on confirmation.
+        // Called when the player confirms a spawn, to choose its position and rotation.
         public static Func<Volume, FunSpawnEntry, FunSandboxSpawnPose> SpawnPoseProvider;
 
         public static void Attach(Volume console)
@@ -88,7 +86,7 @@ namespace FPE_Legacy.Sandbox
             if (categories == null || !ReadCatalogue()) return;
             if (!registration.Built)
             {
-                // Construct locally first. A failed label callback cannot leave half a catalogue.
+                // Build the list first so a failed label callback doesn't leave partial categories.
                 var pending = new List<Volume.catagory>();
                 foreach (var group in Entries.Values.GroupBy(e => e.PackageId)
                     .OrderBy(g => g.Key, StringComparer.Ordinal))
@@ -100,8 +98,7 @@ namespace FPE_Legacy.Sandbox
                         isPlayAs = false,
                         isMusic = false,
                         isWeapon = false,
-                        // Reuse the game's existing tag from the supplied example.
-                        // FPE ownership is identified by registered pointers/resource IDs, not this tag.
+                        // FPE entries are tracked by pointers and resource IDs; this is a regular game tag.
                         tagName = "props",
                         options = new Il2CppSystem.Collections.Generic.List<Volume.option>()
                     };
@@ -135,8 +132,8 @@ namespace FPE_Legacy.Sandbox
             }
         }
 
-        // Returns true only when a custom option was consumed, including rejected requests.
-        // Never pass an fpe-content:// path to native Resources.Load/game RPCs.
+        // Returns true for handled FPE options, including rejected requests.
+        // The caller must then skip the game's Resources.Load and spawn RPC.
         public static bool TryHandleOption(Volume console, int categoryIndex, int optionIndex)
         {
             bool custom = false;
@@ -233,7 +230,7 @@ namespace FPE_Legacy.Sandbox
                 if (registration.Console == null) { Consoles.RemoveAt(i); continue; }
                 try
                 {
-                    // Also covers a console whose Awake ran before content initialization.
+                    // Retry consoles that opened before content was ready.
                     Install(registration);
                     registration.Scroll.Refresh(registration.Console, false);
                 }

@@ -7,7 +7,7 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-// Copy ONLY this file into Assets/Editor in the matching Unity Editor project.
+// Place this file in Assets/Editor of the Unity project used to build the bundles.
 public sealed class FunContentBuilderWindow : EditorWindow
 {
     [Serializable] private sealed class ComponentEntry
@@ -140,7 +140,7 @@ public sealed class FunContentBuilderWindow : EditorWindow
     }
     private static void ValidateId(string id)
     { if (string.IsNullOrWhiteSpace(id) || id.Length > 128 || id.Any(c => c > 127 || !(char.IsLetterOrDigit(c) || c == '_' || c == '-' || c == '.'))) throw new Exception("Invalid ID: " + id); }
-    // Uses Unity's shipped JSON parser to reject malformed objects before building.
+    // JsonUtility needs a concrete type to validate the JSON.
     [Serializable] private sealed class JsonProbe { public string unused; }
     private static void ValidateJsonObject(string json)
     {

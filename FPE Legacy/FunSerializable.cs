@@ -20,27 +20,25 @@ namespace FPE_Legacy.Rpc
     }
 
     /// <summary>
-    /// Runtime FunSerializable for modded components
-    ///
-    /// Server is authoritative by default. Owner permission lets the owning client propose changes
-    /// the server validates ownership, applies the value, and then broadcasts the authoritative value to other clients
+    /// Marks a field for synchronization. The server controls its value by default.
+    /// With Owner permission, the owning client can submit changes for the server to apply and broadcast.
     /// </summary>
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
     public sealed class FunSerializableAttribute : Attribute
     {
-        /// <summary>Who can change this value. Default: server only</summary>
+        /// <summary>Who can write the field. Defaults to the server.</summary>
         public FunSerializableWritePermission WritePermission { get; set; } = FunSerializableWritePermission.Server;
 
-        /// <summary>Optional instance method invoked after a value changes: (), (newValue), or (oldValue, newValue)</summary>
+        /// <summary>Change callback accepting (), (newValue), or (oldValue, newValue).</summary>
         public string OnChange { get; set; }
 
-        /// <summary>Minimum seconds between network sends for this field. 0 means the next sync tick</summary>
+        /// <summary>Minimum send interval in seconds. Zero sends on the next sync tick.</summary>
         public float SendRate { get; set; }
 
-        /// <summary>Use FishNet Unreliable channel for deltas/owner writes. Snapshots are always Reliable</summary>
+        /// <summary>Sends deltas and owner writes unreliably. Snapshots remain reliable.</summary>
         public bool Unreliable { get; set; }
 
-        /// <summary>Do not send server deltas back to the owning client. Usually leave false. Idk when this might be needed</summary>
+        /// <summary>Skips the owning client when sending server deltas.</summary>
         public bool ExcludeOwner { get; set; }
     }
 
@@ -86,8 +84,7 @@ namespace FPE_Legacy.Rpc
     }
 
     /// <summary>
-    /// Runtime field synchronization built on top of FunRPC.
-    /// Supports server authority, owner writes, delta updates, OnChange callbacks, late-join snapshots and other bullshit
+    /// Synchronizes fields through FunRPC, including snapshots for clients that join later.
     /// </summary>
     public static class FunSerializableRuntime
     {
@@ -613,8 +610,7 @@ namespace FPE_Legacy.Rpc
             fieldState.NextSendTime = Time.unscaledTime + field.Attribute.SendRate;
             fieldState.HasAuthoritativeValue = true;
 
-            // Broadcast even when the server already had the same value: this is the authoritative echo
-            // which confirms an owner-side write and refreshes the owner's cached value.
+            // Echo unchanged values too, so the owner can confirm the write and update its cache.
             SendDelta(context.Carrier, definition, field, converted);
         }
 

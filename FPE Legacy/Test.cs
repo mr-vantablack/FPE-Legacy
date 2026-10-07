@@ -24,14 +24,12 @@ namespace FPE_Legacy
         {
             try
             {
-                // CLIENT -> SERVER.
                 if (!FunRPCRuntime.IsLocalOwner(this)) return;
                 if (Input.GetKeyDown(KeyCode.Keypad6))
                 {
                     DemoServerRPC("Hello from CLIENT!", 123, 45.5f, true, new Vector3(1.25f, 2.5f, 3.75f));
                 }
 
-                // SERVER -> ALL OBSERVERS.
                 if (Input.GetKeyDown(KeyCode.Keypad7))
                 {
                     DemoObserversRPC("Hello from HOST!", 777, new Vector2(12f, 34f), Color.cyan);
@@ -42,7 +40,6 @@ namespace FPE_Legacy
                     FunRPCRuntime.PrintNetworkBehaviours();
                 }
 
-                // SERVER -> REMOTE CLIENT.
                 if (Input.GetKeyDown(KeyCode.Keypad1))
                 {
                     var camera = Camera.main;
@@ -82,8 +79,6 @@ namespace FPE_Legacy
             }
         }
 
-        // CLIENT -> SERVER
-
         [FunServerRPC]
         private void DemoServerRPC(string text, int number, float value, bool flag, Vector3 position)
         {
@@ -94,15 +89,11 @@ namespace FPE_Legacy
             MelonLogger.Msg($"[FunRPC] SERVER RPC EXECUTED. " + $"sender={senderClientId}, text='{text}', int={number}, " + $"float={value}, bool={flag}, pos={position}");
         }
 
-        // SERVER -> OBSERVERS
-
         [FunObserversRPC(ExcludeServer = true)]
         private void DemoObserversRPC(string text, int number, Vector2 position, Color color)
         {
             MelonLogger.Msg($"[FunRPC] OBSERVERS RPC EXECUTED. " + $"text='{text}', int={number}, vec2={position}, color={color}");
         }
-
-        // SERVER -> rEMOTE CLIENT
 
         [FunTargetRPC]
         private void DemoTargetRPC(int clientId, string text, float serverTime, Vector3 position)
