@@ -22,16 +22,16 @@ namespace FPE_Legacy
             FunComponents.Register<Examples.FunBreakable>("fpe.breakable");
             FunComponents.Register<Examples.FunSpinner>("fpe.spinner");
             FunComponents.Register<Examples.FunRandomColor>("fpe.randomcolor");
-            FunContent.RegisterFactory("fpe:cube", "1", () =>
-            {
-                var go = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube);
-                go.SetActive(false);
-                go.name = "FunCube";
+            //FunContent.RegisterFactory("fpe:cube", "1", () =>
+            //{
+            //    var go = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube);
+            //    go.SetActive(false);
+            //    go.name = "FunCube";
 
-                var spinner = go.AddComponent<Examples.FunSpinner>();
-                spinner.DegreesPerSecond = new Vector3(0f, 90f, 0f);
-                return go;
-            });
+            //    var spinner = go.AddComponent<Examples.FunSpinner>();
+            //    spinner.DegreesPerSecond = new Vector3(0f, 90f, 0f);
+            //    return go;
+            //});
             LoggerInstance.Msg("[FPE] Content root: " + FunContent.RootDirectory);
             // Register components and factories before scanning; Volume.Awake needs the full catalogue.
             FunNetwork.Observe(FunContent.ScanAsync(yieldBetweenBundles: false));
